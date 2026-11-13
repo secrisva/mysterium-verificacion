@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src https://gmakknbtwfwgvcjglwgv.supabase.co; img-src 'none'; base-uri 'none'; form-action 'none'">
+<title>MYSTERIUM — Confirmación de identidad</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at top,#1a3f55 0%,#071c2e 52%,#061321 100%);color:#f7f0df;font:16px/1.6 system-ui,-apple-system,Segoe UI,sans-serif;display:grid;place-items:center;padding:22px}.card{width:min(100%,520px);padding:clamp(24px,6vw,48px);text-align:center;border:1px solid #af9056;border-radius:22px;box-shadow:0 20px 80px #0008;background:#102b40}.mark{width:64px;height:64px;margin:auto;display:grid;place-items:center;border:1px solid #bd9a54;border-radius:50%;font-size:28px;color:#f1d08a}h1{font:600 clamp(27px,6vw,38px)/1.15 Georgia,serif;letter-spacing:.06em;color:#f8d68e;margin:21px 0 7px}h2{font-size:18px;font-weight:600;margin:22px 0 7px}p{margin:8px 0 14px}.muted{color:#c8d6df}.state{border:1px solid #6d8192;border-radius:11px;background:#153a50;padding:15px;margin:20px 0;overflow-wrap:anywhere}.state.good{border-color:#7bbaa6;background:#15463d}.state.bad{border-color:#d3a16b;background:#443526}.note{font-size:13px;color:#bdccd4}footer{margin-top:25px;color:#dec18b;font-size:12px;letter-spacing:.12em}a{color:#f0d18d}
+</style>
+</head>
+<body>
+<main class="card"><div class="mark" aria-hidden="true">✦</div><h1>MYSTERIUM</h1><p class="muted">Año Litúrgico · SECRISVA</p><h2>Confirmación de identidad</h2><div class="state" id="estado" role="status" aria-live="polite">Comprobando si existe un enlace de confirmación…</div><p class="muted" id="detalle">Esta página verifica la identidad del correo autorizado mediante Supabase.</p><p class="note">La confirmación de correo <strong>no cambia</strong> la contraseña de tu aplicación privada. La autorización para cambiarla se configurará y comprobará por separado.</p><footer>© 2026 SECRISVA · VERIFICACIÓN DE IDENTIDAD</footer></main>
+<script>
+(async()=>{
+ 'use strict';
+ const endpoint='https://gmakknbtwfwgvcjglwgv.supabase.co/functions/v1/mysterium-verificacion-correo';
+ const estado=document.getElementById('estado');
+ const detalle=document.getElementById('detalle');
+ const hash=new URLSearchParams(window.location.hash.replace(/^#/,''));
+ const token=hash.get('access_token');
+ const authError=hash.get('error_description')||hash.get('error');
+ // Quitar los tokens del historial antes de continuar, sin enviarlos a terceros.
+ window.history.replaceState(null,'',window.location.pathname);
+ if(authError){estado.className='state bad';estado.textContent='Supabase no pudo completar la confirmación.';detalle.textContent='Solicita un enlace nuevo desde el procedimiento autorizado.';return;}
+ if(!token){estado.className='state bad';estado.textContent='No se encontró un enlace de confirmación válido.';detalle.textContent='Esta página debe abrirse desde el correo enviado por Supabase. Si abriste la dirección manualmente, este mensaje es normal.';return;}
+ estado.textContent='Validando la identidad con Supabase…';
+ try{
+  const ctrl=new AbortController();
+  const timeout=setTimeout(()=>ctrl.abort(),15000);
+  let response;
+  try{response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({accion:'verificar',token}),cache:'no-store',referrerPolicy:'no-referrer',signal:ctrl.signal});}finally{clearTimeout(timeout);}
+  const data=await response.json();
+  if(response.ok&&data.verificado===true){estado.className='state good';estado.textContent='Correo autorizado verificado correctamente.';detalle.textContent='Has completado la comprobación de identidad. Esta prueba no modifica tu contraseña ni desbloquea el archivo privado.';}
+  else{estado.className='state bad';estado.textContent='No fue posible verificar este enlace.';detalle.textContent='Puede haber caducado o estar pendiente otra configuración. Solicita un enlace nuevo cuando el servicio esté listo.';}
+ }catch(_){estado.className='state bad';estado.textContent='No se pudo conectar con el servicio de verificación.';detalle.textContent='Comprueba tu conexión a internet y la configuración de la función en Supabase.';}
+})();
+</script>
+</body>
+</html>
